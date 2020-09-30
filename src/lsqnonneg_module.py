@@ -1,15 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
-
-
-# Date:2018.07.21
-# Author: Runyu Zhang
-
-
-# In[1]:
-
 
 import numpy as np
 import torch
@@ -17,9 +8,6 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torch.autograd.function import once_differentiable
 from scipy.optimize import nnls
-
-
-# In[4]:
 
 
 class LsqNonnegF(torch.autograd.Function):
@@ -61,9 +49,6 @@ class LsqNonnegF(torch.autograd.Function):
         return grad_input, grad_A
 
 
-# In[3]:
-
-
 def lsqnonneg_tensor_version(C, D):
     C = C.numpy() # Transforming to numpy array size(m,k)
     D = D.numpy() # size(m,n)
@@ -79,9 +64,6 @@ def lsqnonneg_tensor_version(C, D):
         X[:,i] = x
     X = torch.from_numpy(X).double() # Transforming to torch Tensor
     return X, res_total
-
-
-# In[4]:
 
 
 def calc_grad_X(grad_S, A, S):
@@ -100,9 +82,6 @@ def calc_grad_X(grad_S, A, S):
         grad_X[:,i] = np.linalg.pinv(A_supp).T@grad_s_supp
     grad_X = torch.from_numpy(grad_X).double()
     return grad_X
-
-
-# In[2]:
 
 
 def calc_grad_A(grad_S, A, S, X):
@@ -128,9 +107,6 @@ def calc_grad_A(grad_S, A, S, X):
     return grad_A
 
 
-# In[6]:
-
-
 class LsqNonneg(nn.Module):
     '''
     Defining a submodule 'LsqNonneg' of the nn.Module
@@ -148,32 +124,3 @@ class LsqNonneg(nn.Module):
         
     def forward(self, input):
         return LsqNonnegF.apply(input, self.A)
-
-
-# In[10]:
-
-
-# from torch.autograd import gradcheck
-
-
-# In[14]:
-
-
-# n = 10
-# m = 10
-# k = 5
-# X_tensor = torch.randn(n,m, dtype = torch.double)
-# A_tensor = torch.randn(k,m, dtype = torch.double)
-
-
-# In[16]:
-
-
-# X = Variable(X_tensor, requires_grad=True)
-# A = Variable(A_tensor, requires_grad = True)
-# X = torch.abs(X)
-# A = torch.abs(A)
-# input = (X, A)
-# test = gradcheck(LsqNonnegF().apply, input, eps = 1e-6, atol = 0, rtol = 1e-9)
-# print(test)
-

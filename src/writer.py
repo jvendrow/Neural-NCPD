@@ -1,20 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
-
-
-# Date:2018.07.21
-# Author: Runyu Zhang
-
-
-# In[13]:
 
 
 from matplotlib import pyplot as plt
-
-
-# In[14]:
 
 
 class Writer:
@@ -58,10 +47,3 @@ class Writer:
                 fig = plt.figure(figsize = (6,6))
                 plt.imshow(tensor)
                 plt.show()
-
-
-# In[ ]:
-
-
-
-
