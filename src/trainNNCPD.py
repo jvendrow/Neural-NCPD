@@ -36,10 +36,10 @@ def train(net, X, loss_func, r, epoch = 10, lr1 = 1e-3, lr2 = 1e-3, random_init=
 
  
     if(random_init):
-        factors_tl = non_negative_parafac(np.asarray(X), rank=r, init='random', random_state=2)#[1]
+        factors_tl = non_negative_parafac(np.asarray(X), rank=r, init='random', random_state=2)[1]
         
     else:
-        factors_tl = non_negative_parafac(np.asarray(X), rank=r)#[1]
+        factors_tl = non_negative_parafac(np.asarray(X), rank=r)[1]
     
     A = Variable(torch.from_numpy(factors_tl[0]), requires_grad=True)
     B = Variable(torch.from_numpy(factors_tl[1]), requires_grad=True)
