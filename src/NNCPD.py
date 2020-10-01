@@ -1,14 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
-#Author: Josh Vendrow
-
-
-# In[2]:
-
 
 import torch
 import torch.nn as nn
@@ -18,9 +10,6 @@ import scipy.io as sio
 from lsqnonneg_module import LsqNonneg
 import numpy as np
 import torch.nn.functional as F
-
-
-# In[3]:
 
 
 class NNCPD(nn.Module):
@@ -79,13 +68,6 @@ class NNCPD(nn.Module):
             
         if self.c is None:
             return A_S_lst, B_S_lst, C_S_lst
-        #else:
-        #    pred = self.linear(X)
-        #    return S_lst, pred
-        
-
-
-# In[4]:
 
 
 def random_NNCPD(X, r):
@@ -95,9 +77,6 @@ def random_NNCPD(X, r):
     B = torch.autograd.Variable(torch.abs(torch.randn(n2, r, requires_grad=True)))
     C = torch.autograd.Variable(torch.abs(torch.randn(n3, r, requires_grad=True)))
     return A, B, C
-
-
-# In[ ]:
 
 
 def PTF(X, r):
@@ -118,8 +97,6 @@ def PTF(X, r):
 
         Y = np.transpose(X, (0,1,2))
         Y = np.reshape(Y, (n1,n2*n3))
-        #M = np.reshape(outer_product2(B,C), (n2*n3,)
-        #M = np.
         
         divA = (Y*M)/(A*M.T*M)
         
@@ -151,9 +128,6 @@ def PTF(X, r):
     return A, B, C
 
 
-# In[ ]:
-
-
 def weights_H(A, B, C, H_A, H_B, H_C):
     
     alphas = []
@@ -174,9 +148,6 @@ def weights_H(A, B, C, H_A, H_B, H_C):
 
 
     return weights
-
-
-# In[ ]:
 
 
 def intro_product(A, B, C, H_A, H_B, H_C, get_alpha=False):
@@ -202,12 +173,6 @@ def intro_product(A, B, C, H_A, H_B, H_C, get_alpha=False):
     else:
          return X_approx
         
-        
-        
-
-
-# In[ ]:
-
 
 def outer_product(A, B, C):
     
@@ -313,9 +278,6 @@ class Recon_Loss_Straight(nn.Module):
     def forward(self, net, X, A_S_lst, B_S_lst, C_S_lst, A, B, C, pred = None, label = None, L = None):
         depth = net.depth
         
-        #l1_norms = self.l1(A_S_lst[-1],target=torch.zeros_like(A_S_lst[-1]))
-        #l1_norms += self.l1(B_S_lst[-1],target=torch.zeros_like(B_S_lst[-1]))
-        #l1_norms += self.l1(C_S_lst[-1],target=torch.zeros_like(C_S_lst[-1]))
         
         A_X_approx = A_S_lst[-1]
         B_X_approx = B_S_lst[-1]
@@ -324,10 +286,6 @@ class Recon_Loss_Straight(nn.Module):
             A_X_approx = torch.mm(net.A_lsqnonneglst[i].A,A_X_approx)
             B_X_approx = torch.mm(net.B_lsqnonneglst[i].A,B_X_approx)
             C_X_approx = torch.mm(net.C_lsqnonneglst[i].A,C_X_approx)
-            
-            #l1_norms += self.l1(net.A_lsqnonneglst[i].A,target=torch.zeros_like(net.A_lsqnonneglst[i].A))
-            #l1_norms += self.l1(net.B_lsqnonneglst[i].A,target=torch.zeros_like(net.B_lsqnonneglst[i].A))
-            #l1_norms += self.l1(net.C_lsqnonneglst[i].A,target=torch.zeros_like(net.C_lsqnonneglst[i].A))
             
         A_loss = self.criterion(A, A_X_approx)
         B_loss = self.criterion(B, B_X_approx)
@@ -338,10 +296,10 @@ class Recon_Loss_Straight(nn.Module):
         X_approx2 = outer_product(A,B,C)
         
         
-        reconstructionloss = self.criterion(X_approx, X)# + 0.00003 * l1_norms
+        reconstructionloss = self.criterion(X_approx, X)
         reconstructionloss += self.criterion(X_approx2, X)
         
-        #reconstructionloss += A_loss + B_loss + C_loss
+
         if pred is None:
             # unsupervised case
             assert(label is None and L is None)
@@ -351,62 +309,6 @@ class Recon_Loss_Straight(nn.Module):
             classificationloss = self.criterion2(pred, label, L)
             return reconstructionloss + self.lambd*classificationloss
         
-class Recon_Loss_NMF(nn.Module):
-    '''
-    Defining the reconstruction loss || X - ABC ||
-    
-    initial parameter: 
-        lambd: the regularization parameter, defining how important the classification error is.
-        classification_type: string, 'L2' or 'CrossEntropy'. Default 'CrossEntropy'
-    '''
-    def __init__(self,lambd = 0, classification_type = 'CrossEntropy'):
-        super(Recon_Loss_NMF, self).__init__()
-        
-        self.criterion = Fro_Norm()
-        self.l1 = nn.L1Loss(size_average=False)
-
-
-            
-    def forward(self, net, X, A_S_lst, B_S_lst, C_S_lst, A, B, C, pred = None, label = None, L = None):
-        depth = net.depth
-        
-        #l1_norms = self.l1(A_S_lst[-1],target=torch.zeros_like(A_S_lst[-1]))
-        #l1_norms += self.l1(B_S_lst[-1],target=torch.zeros_like(B_S_lst[-1]))
-        #l1_norms += self.l1(C_S_lst[-1],target=torch.zeros_like(C_S_lst[-1]))
-        
-        A_X_approx = A_S_lst[-1]
-        B_X_approx = B_S_lst[-1]
-        C_X_approx = C_S_lst[-1]
-        for i in range(depth-2, -1, -1):
-            A_X_approx = torch.mm(net.A_lsqnonneglst[i].A,A_X_approx)
-            B_X_approx = torch.mm(net.B_lsqnonneglst[i].A,B_X_approx)
-            C_X_approx = torch.mm(net.C_lsqnonneglst[i].A,C_X_approx)
-            
-            #l1_norms += self.l1(net.A_lsqnonneglst[i].A,target=torch.zeros_like(net.A_lsqnonneglst[i].A))
-            #l1_norms += self.l1(net.B_lsqnonneglst[i].A,target=torch.zeros_like(net.B_lsqnonneglst[i].A))
-            #l1_norms += self.l1(net.C_lsqnonneglst[i].A,target=torch.zeros_like(net.C_lsqnonneglst[i].A))
-            
-        A_loss = self.criterion(A, A_X_approx)
-        B_loss = self.criterion(B, B_X_approx)
-        C_loss = self.criterion(C, C_X_approx)
-            
-        X_approx = outer_product(A_X_approx,B_X_approx,C_X_approx)
-        
-        X_approx2 = outer_product(A,B,C)
-        
-        
-        #reconstructionloss = self.criterion(X_approx, X)# + 0.00003 * l1_norms
-        reconstructionloss = self.criterion(X_approx2, X)
-        
-        reconstructionloss = reconstructionloss + A_loss + B_loss + C_loss
-        if pred is None:
-            # unsupervised case
-            assert(label is None and L is None)
-            return reconstructionloss
-        else:
-            # fully supervised case and semisupervised case
-            classificationloss = self.criterion2(pred, label, L)
-            return reconstructionloss + self.lambd*classificationloss
         
 class Energy_Loss_NNCPD(nn.Module):
     '''
@@ -498,22 +400,6 @@ class ReconstructionLoss(nn.Module):
         X_approx = outer_product(A, B, C)
         reconstructionloss = self.criterion(X_approx, X)
         return reconstructionloss
-   
-"""
-class ReconstructionLoss(nn.Module):
-    '''
-    calculate the reconstruction error ||X - AS||_F^2.
-    Do: criterion = ReconstructionLoss()
-        loss = criterion(X, S, A) and the loss is the entrywise average of the square of Frobenius norm ||X - AS||_F^2.
-    '''
-    def __init__(self):
-        super(ReconstructionLoss, self).__init__()
-        self.criterion = Fro_Norm()
-    def forward(self, X, S, A):
-        X_approx = torch.mm(A,S)
-        reconstructionloss = self.criterion(X_approx, X)
-        return reconstructionloss
-"""
 
 class Energy_Loss_NMF(nn.Module):
     """
@@ -585,10 +471,6 @@ class Energy_Loss_NMF(nn.Module):
             classificationloss = self.criterion2(pred, label, L)
             return total_reconstructionloss + self.lambd*classificationloss
 
-
-# In[1]:
-
-
 class Energy_Loss_Tensor(nn.Module):
     '''
     Defining the reconstruction loss || X - ABC ||
@@ -610,11 +492,10 @@ class Energy_Loss_Tensor(nn.Module):
         
         
         approx = []
-        #print(depth)
-        #print(len(A_S_lst))
+
         
         for d in range(depth-1):
-        #for d in range(0,2):   
+
             A_X_approx = A_S_lst[d]
             B_X_approx = B_S_lst[d]
             C_X_approx = C_S_lst[d]
@@ -626,10 +507,7 @@ class Energy_Loss_Tensor(nn.Module):
             approx.append(outer_product(A_X_approx,B_X_approx,C_X_approx))
 
         X_approx = outer_product(A,B,C)
-        #reconstructionloss = self.criterion(X, X_approx)
-        #reconstructionloss = self.criterion(X_approx, approx[0])
-        #for i in range(depth-2):
-        #    reconstructionloss += self.criterion(approx[i], approx[i+1])
+
         reconstructionloss = self.criterion(X, approx[0])
         for i in range(1,depth-1):
             reconstructionloss += self.criterion(X, approx[i])
@@ -657,8 +535,6 @@ class Energy_Loss_Tensor(nn.Module):
             return reconstructionloss
 
 
-# In[ ]:
-
 
 class Energy_Loss_Tensor2(nn.Module):
     '''
@@ -679,11 +555,9 @@ class Energy_Loss_Tensor2(nn.Module):
         
         
         approx = []
-        #print(depth)
-        #print(len(A_S_lst))
+
         
         for d in range(depth-1):
-        #for d in range(0,2):   
             A_X_approx = net.A_lsqnonneglst[d].A
             B_X_approx = net.B_lsqnonneglst[d].A
             C_X_approx = net.C_lsqnonneglst[d].A
@@ -696,22 +570,16 @@ class Energy_Loss_Tensor2(nn.Module):
 
         X_approx = outer_product(A,B,C)
         reconstructionloss = self.criterion(X, X_approx)
-        #reconstructionloss += self.criterion(X_approx, approx[0])
         for i in range(depth-1):# -2 !
-            reconstructionloss += self.criterion(approx[i], X)#approx[i+1])
+            reconstructionloss += self.criterion(approx[i], X)
         
         if pred is None:
             # unsupervised case
             assert(label is None and L is None)
             return reconstructionloss
         else:
-            # fully supervised case and semisupervised case
-            #classificationloss = self.criterion2(pred, label, L)
-            #return reconstructionloss + self.lambd*classificationloss
+
             return reconstructionloss
-
-
-# In[ ]:
 
 
 class ReconstructionLossNMF(nn.Module):
@@ -787,8 +655,6 @@ class ClassificationLossCrossEntropy(nn.Module):
             classificationloss = self.criterion(L*Y_pred, l*label)
             return classificationloss
 
-
-# In[ ]:
 
 
 class L21_Norm(nn.Module):
