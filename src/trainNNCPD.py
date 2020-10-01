@@ -4,11 +4,10 @@
 # In[1]:
 
 
-from NNCPD import NNCPD, Recon_Loss, L21_Norm, random_NNCPD, outer_product_np, Fro_Norm, outer_product
+from Neural_Fact import Net, outer_product_np, Fro_Norm, outer_product
 from writer import Writer
 import torch
 import numpy as np
-from lsqnonneg_module import LsqNonneg
 import torch.nn as nn
 from matplotlib import pyplot as plt
 from torch.autograd import Variable
@@ -21,7 +20,7 @@ from tqdm.notebook import tqdm
 # In[2]:
 
 
-def train(net, X, loss_func, r, epoch = 10, lr1 = 1e-3, lr2 = 1e-3, random_init=False):
+def train(net, X, loss_func, r, epoch = 10, lr = 1e-3, random_init=False):
     '''
     ----- Discription
     
@@ -36,78 +35,49 @@ def train(net, X, loss_func, r, epoch = 10, lr1 = 1e-3, lr2 = 1e-3, random_init=
 
  
     if(random_init):
-        factors_tl = non_negative_parafac(np.asarray(X), rank=r, init='random', random_state=2)#[1]
+        factors_tl = non_negative_parafac(np.asarray(X), rank=r, init='random', random_state=2)
         
     else:
-        factors_tl = non_negative_parafac(np.asarray(X), rank=r)#[1]
+        factors_tl = non_negative_parafac(np.asarray(X), rank=r)
     
-    A = Variable(torch.from_numpy(factors_tl[0]), requires_grad=True)
-    B = Variable(torch.from_numpy(factors_tl[1]), requires_grad=True)
-    C = Variable(torch.from_numpy(factors_tl[2]), requires_grad=True)
+    Xs = [Variable(torch.from_numpy(factors_tl[k]), requires_grad=True) for k in range(len(factors_tl))]
     
     
-    configs = [[{} for _ in range(3)] for i in range(net.depth-1)]
+    configs = [{} for i in range(net.depth)]
 
-    for config_list in configs:
-        for config in config_list:
-            config['learning_rate'] = lr2
-            config['beta1'] = 0.9
-            config['beta2'] = 0.99
-            config['epsilon'] = 1e-8
-            config['t'] = 0
-            
-    ABC_configs = [{} for _ in range(3)]
-
-    for config in ABC_configs:
-        config['learning_rate'] = lr1
+    for config in configs:
+        config['learning_rate'] = lr
         config['beta1'] = 0.9
         config['beta2'] = 0.99
         config['epsilon'] = 1e-8
         config['t'] = 0
-        
+            
         
     for i in tqdm(range(epoch)):
-        
-
 
         net.zero_grad()
-        A_S_lst, B_S_lst, C_S_lst = net(A,B,C)
-        loss = loss_func(net, X, A_S_lst, B_S_lst, C_S_lst, A, B, C)
+        factors = net(Xs)
+        loss = loss_func(net, X, factors)
 
         loss.backward(retain_graph=True)
         history.add_scalar('loss', loss.data)
 
-        for l in range(net.depth - 1):
-            As = [net.A_lsqnonneglst[l].A, net.B_lsqnonneglst[l].A,net.C_lsqnonneglst[l].A]
-            Ss = [A_S_lst, B_S_lst, C_S_lst]
-            Xs = [A, B, C]
+        weights = net.weights
+        
+        for k in range(len(Xs)):
+            history.add_tensor('X' + str(k+1), Xs[k].data)
+            
+        for l in range(net.depth):  
             
             if epoch == 0:
-                for j, config in enumerate(configs[l]):
-                    config['v'] = torch.zeros_like(As[j].data)
-                    config['a'] = torch.zeros_like(As[j].data)
+                config['v'] = torch.zeros_like(weights[l].weight.data)
+                config['a'] = torch.zeros_like(weights[l].weight.data)
                 
-            
-            for j, letter in enumerate(['A','B','C']):
-                # record history
-                history.add_tensor(letter + '_A'+str(l+1), As[j].data)
-                history.add_tensor(letter + '_grad_A'+str(l+1), As[j].grad.data)
-                history.add_tensor(letter + '_S' + str(l+1), Ss[j][l].data)
-                history.add_tensor(letter + '_X' + str(l+1), Xs[j].data)
+            history.add_tensor('S' + str(l+1), weights[l].weight.data)
                 
-                As[j].data, configs[l][j] = adam(As[j].data, As[j].grad.data, configs[l][j])
-                As[j].data = As[j].data.clamp(min = 0)   
-
-            A.data, ABC_configs[0] = adam(A.data, A.grad.data, ABC_configs[0])
-            A.data = A.data.clamp(min = 0)  
-
-            B.data, ABC_configs[1] = adam(B.data, B.grad.data, ABC_configs[1])
-            B.data = B.data.clamp(min = 0)  
-
-            C.data, ABC_configs[2] = adam(C.data, C.grad.data, ABC_configs[2])
-            C.data = C.data.clamp(min = 0)  
- 
-        
+            weights[l].weight.data, configs[l] = adam(weights[l].weight.data, weights[l].weight.grad.data, configs[l])
+            weights[l].weight.data = weights[l].weight.data.clamp(min = 0)   
+    
     return history
 
 def adam(w, dw, config=None):
