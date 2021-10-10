@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# In[1]:
+
 
 from NNCPD import NNCPD, Recon_Loss, L21_Norm, random_NNCPD, outer_product_np, Fro_Norm, outer_product
 from writer import Writer
@@ -14,6 +16,9 @@ import tensorly as tl
 from tensorly import unfold as tl_unfold
 from tensorly.decomposition import parafac, non_negative_parafac
 from tqdm.notebook import tqdm
+
+
+# In[2]:
 
 
 def train(net, X, loss_func, r, epoch = 10, lr1 = 1e-3, lr2 = 1e-3, random_init=False):
@@ -110,6 +115,14 @@ def adam(w, dw, config=None):
     Uses the Adam update rule, which incorporates moving averages of both the
     gradient and its square and a bias correction term.
 
+    config format:
+    - learning_rate: Scalar learning rate.
+    - beta1: Decay rate for moving average of first moment of gradient.
+    - beta2: Decay rate for moving average of second moment of gradient.
+    - epsilon: Small scalar used for smoothing to avoid dividing by zero.
+    - m: Moving average of gradient.
+    - v: Moving average of squared gradient.
+    - t: Iteration number.
     """
     if config is None: config = {}
     config.setdefault('learning_rate', 1e-3)
@@ -145,5 +158,9 @@ def adam(w, dw, config=None):
     config['v'] = v
     config['a'] = a
     config['t']  = t
+
+    # ================================================================ #
+    # END YOUR CODE HERE
+    # ================================================================ #
     
     return next_w, config
