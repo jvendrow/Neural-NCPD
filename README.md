@@ -1,4 +1,4 @@
-# Neural-NNCPD
+# Neural-NCPD
 This is the repository for the paper:
 
 > **Neural Nonnegative CP Decomposition for Hierarchical Tensor Analysis** <br>
