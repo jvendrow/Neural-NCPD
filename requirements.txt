@@ -1,4 +1,4 @@
-tensorly==0.4.5
+tensorly==0.4.3
 scipy==1.4.1
 tqdm==4.36.1
 matplotlib==3.2.1
